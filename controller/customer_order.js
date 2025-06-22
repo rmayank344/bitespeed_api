@@ -38,6 +38,77 @@ const identifyUser = async (req, res) => {
         }
       });
     }
+
+    const allContactIds = new Set();
+    const contactMap = new Map(); 
+    let primaryContact = null;
+
+    for (const contact of matchingContacts) {
+      allContactIds.add(contact.id);
+      contactMap.set(contact.id, contact);
+
+      if (contact.linkPrecedence === "secondary" && contact.linkedId) {
+        const primary = await ContactModel.findOne({ where: { id: contact.linkedId } });
+        if (primary) {
+          allContactIds.add(primary.id);
+          contactMap.set(primary.id, primary);
+        }
+      }
+    }
+
+    const allLinkedContacts = await ContactModel.findAll({
+      where: {
+        [Op.or]: [
+          { id: Array.from(allContactIds) },
+          { linkedId: Array.from(allContactIds) }
+        ]
+      },
+      order: [['createdAt', 'ASC']]
+    });
+
+    const truePrimary = allLinkedContacts.find(c => c.linkPrecedence === "primary");
+    primaryContact = truePrimary;
+
+    for (const contact of allLinkedContacts) {
+      if (
+        contact.id !== primaryContact.id &&
+        contact.linkPrecedence === "primary"
+      ) {
+        contact.linkPrecedence = "secondary";
+        contact.linkedId = primaryContact.id;
+        await contact.save();
+      }
+    }
+
+    const emailExists = allLinkedContacts.some(c => c.email === email);
+    const phoneExists = allLinkedContacts.some(c => c.phoneNumber === phoneNumber);
+
+    if ((email && !emailExists) || (phoneNumber && !phoneExists)) {
+      const newSecondary = await ContactModel.create({
+        email,
+        phoneNumber,
+        linkedId: primaryContact.id,
+        linkPrecedence: "secondary",
+        deletedAt: null
+      });
+
+      allLinkedContacts.push(newSecondary);
+    }
+
+    const emails = [...new Set(allLinkedContacts.map(c => c.email).filter(Boolean))];
+    const phoneNumbers = [...new Set(allLinkedContacts.map(c => c.phoneNumber).filter(Boolean))];
+    const secondaryContactIds = allLinkedContacts
+      .filter(c => c.linkPrecedence === "secondary")
+      .map(c => c.id);
+
+    return res.status(200).json({
+      contact: {
+        primaryContatctId: primaryContact.id,
+        emails,
+        phoneNumbers,
+        secondaryContactIds
+      }
+    });
   }
   catch (error) {
     console.error("Error:", error);
