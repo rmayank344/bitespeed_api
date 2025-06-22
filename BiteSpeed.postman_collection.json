@@ -1,0 +1,40 @@
+{
+	"info": {
+		"_postman_id": "862366b3-0ebe-485f-a82a-7108fdf95e64",
+		"name": "BiteSpeed",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "32903107"
+	},
+	"item": [
+		{
+			"name": "Customer Order",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"email\": \"marty@example.com\",\r\n  \"phoneNumber\": \"333333\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3001/api/customer/identify",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"api",
+						"customer",
+						"identify"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
